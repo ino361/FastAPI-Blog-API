@@ -29,6 +29,7 @@ class CommentOut(BaseModel):
     text: Optional[str] = None
     owner_id: int
     post_id: int
+    image_path: str
 
     class Config:
         from_attributes = True
