@@ -5,8 +5,8 @@ from pydantic import ConfigDict
 
 
 class PostBase(BaseModel):
-    title: str
-    content: str
+    title: Optional[str] = None
+    content: Optional[str] = None
     is_published: Optional[bool] = True
     
     
