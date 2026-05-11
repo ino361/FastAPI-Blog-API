@@ -4,3 +4,6 @@
 
 static/posts/*
 static/comments/*
+
+__pycache__/
+*.pyc
