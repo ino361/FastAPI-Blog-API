@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session, joinedload
+import oauth2
 import models, schema
 from database import get_db
 from oauth2 import get_current_user
@@ -9,7 +10,7 @@ import uuid
 import shutil
 from typing import List, Annotated
 from pydantic import WithJsonSchema
-
+import re
 
 router = APIRouter()
 SwaggerUploadFile = Annotated[UploadFile, WithJsonSchema({"type": "string", "format": "binary"})]
@@ -17,7 +18,7 @@ SwaggerUploadFile = Annotated[UploadFile, WithJsonSchema({"type": "string", "for
 @router.post('/posts/',response_model=schema.PostResponse)
 async def create_post(
     db: Session=Depends(get_db), 
-    current_user:models.Users=Depends(get_current_user),
+    current_user:models.Users=Depends(oauth2.get_current_user),
     title: str = Form(None),
     is_published: bool = Form(True),
     images: List[SwaggerUploadFile] = File([]),   
@@ -37,12 +38,18 @@ async def create_post(
             detail='Boş bişe yapaman'
         )
     
+    estimated_time = 1
+    if content:
+        words = content.split()
+        word_count = len(words)
+        estimated_time = max(1, word_count // 200)
+
     new_post = models.Post(
         title = title,
         content = content,
         is_published = is_published,
-        owner_id = current_user.id
-        
+        owner_id = current_user.id,
+        estimated_read_time = estimated_time
     )
     db.add(new_post)
     db.commit()
@@ -69,8 +76,39 @@ async def create_post(
         )
         db.add(new_image)
 
+#Takipciye yeni post bildirimi
+
+    for follower in current_user.followers:
+        if follower.id != current_user.id:
+            yeni_bildirim = models.Notification(
+                receiver_id=follower.id,
+                sender_id=current_user.id,
+                message=f"{current_user.username} yeni bir post paylasti: {new_post.title}",
+                post_id=new_post.id
+            )
+            db.add(yeni_bildirim)
+
+
+    if content:
+        mentions = re.findall(r'@(\w+)', content)
+        for mentioned_username in set(mentions):
+            if mentioned_username == current_user.username:
+                continue
+
+            mentioned_user = db.query(models.Users).filter(models.Users.username == mentioned_username).first()
+            if mentioned_user and mentioned_user.id != current_user.id:
+                yeni_bildirim = models.Notification(
+                    receiver_id=mentioned_user.id,
+                    sender_id=current_user.id,
+                    message=f"{current_user.username} seni bir postda etiketledi: {new_post.title}",
+                    post_id=new_post.id
+                )
+                db.add(yeni_bildirim)   
+
+
     db.commit()
     db.refresh(new_post)
+
     return new_post
 
 
@@ -78,8 +116,12 @@ async def create_post(
 
 @router.get('/posts', response_model=list[schema.PostResponse])
 def get_all_posts(db:Session=Depends(get_db)):
-    posts = db.query(models.Post).options(joinedload(models.Post.comments)).all()
+    posts = db.query(models.Post).options(joinedload(models.Post.comments), joinedload(models.Post.liked_posts_by_users)).all()
     return posts
+
+
+
+
 
 
 @router.delete('/post/{id}',status_code=204,)
