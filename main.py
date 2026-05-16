@@ -3,6 +3,7 @@ import models, database
 import routers.auth as auth
 import routers.post as post
 import routers.user as user
+import routers.like as like
 from fastapi.responses import JSONResponse
 import time
 from database import get_db
@@ -10,6 +11,9 @@ from sqlalchemy.orm import Session
 from oauth2 import get_current_user
 from fastapi.staticfiles import StaticFiles
 import os
+import routers.notifications as notifications
+import routers.follow as follow
+import routers.resetpassword as resetpassword
 
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -43,7 +47,10 @@ app.mount('/static', StaticFiles(directory='static'), name='static')
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(post.router, prefix="/posts", tags=["Post"])
 app.include_router(user.router, prefix="/users", tags=["User"])
-
+app.include_router(like.router, prefix="/like", tags=["Like"])
+app.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
+app.include_router(follow.router, prefix="/follow", tags=["Follow"])
+app.include_router(resetpassword.router, prefix="/reset-password", tags=["Reset Password"])
 
 
 @app.get('/', tags=['Selam Aleyk'])
