@@ -9,7 +9,38 @@ class PostBase(BaseModel):
     content: Optional[str] = None
     is_published: Optional[bool] = True
     
+
+
+
     
+class NotificationResponse(BaseModel): #Bildirimler için dönen şema
+    receiver_id: int
+    message: str
+    sender_id: int
+    id: int
+    created_at: datetime
+    is_read: bool
+    post_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UserFollowListResponse(BaseModel):
+    id: int
+    username: str
+
+    class Config:
+        from_attributes = True
+
+
+class PostSimpleResponse(BaseModel):#Like ve Takip için dönen şema
+    id: int
+    username: str
+
+    class Config:
+        from_attributes = True
+
 
 
 class PostCreate(PostBase):
@@ -40,9 +71,14 @@ class PostResponse(PostBase):
     owner_id: int
     comments:  list[CommentOut] =[] 
     images: list[PostImageResponse] = []
+    estimated_read_time: Optional[int] = None
 
     class Config:
         from_attributes = True
+
+
+class PostDetailResponse(PostResponse):
+    liked_by_users: list[str] = []
     
 
 class PostUpdate(PostBase):
@@ -60,6 +96,21 @@ class AdminLogin(BaseModel):
 class TokenModel(BaseModel):
     access_token: str
     token_type: str
+
+
+
+class ResetTokenResponse(BaseModel):
+    token: str
+    created_at: datetime
+    expires_at: datetime
+    id: int
+    user_id: int
+    is_used: bool
+
+    class Config:
+        from_attributes = True
+
+
 
 
 class UserCreate(BaseModel):
@@ -81,4 +132,9 @@ class UserResponse(BaseModel):
 class CommentCreate(BaseModel):
     text: str
 
+class PasswordResetRequest(BaseModel):
+    mail: str
 
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
